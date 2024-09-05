@@ -4,8 +4,12 @@ from pathlib import Path
 import tarfile
 import glob
 import json
+from collections import Counter
 
 from bs4 import BeautifulSoup
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 
 def get_directory_size(directory_path: Path) -> int:
@@ -90,15 +94,15 @@ def extract_file(
 def extract_data(
     pattern: str = "data/reuters21578/reut2-*.sgm",
     output_filepath: Path = Path("data/reuters21578.json"),
-) -> dict:
+) -> pd.DataFrame:
     """
     Extracts titles, bodies, and topics from the SGML files in the specified pattern.
-    Returns a dictionary with the extracted data.
+    Returns a dataframe with the extracted data.
     Args:
         pattern (str): The pattern to match SGML files.
         output_filepath (Path): The path where the extracted data will be saved as a JSON file.
     Returns:
-        dict: A dictionary containing the extracted titles, bodies, and topics.
+        pd.DataFrame: A dataframe containing the extracted titles, bodies, and topics.
     """
     results = {
         "title": [],
@@ -162,4 +166,87 @@ def extract_data(
                 print(f"Error decoding {file_path}: {e}")
                 return None
 
-    return results
+    return pd.DataFrame(results)
+
+
+def create_train_test_split(df: pd.DataFrame) -> tuple:
+    """
+    Splits the dataset into train, validation, and test sets based on the 'lewissplit' attribute.
+    Args:
+        df (pd.DataFrame): DataFrame containing the dataset.
+    Returns:
+        tuple: A tuple containing the train, validation, and test DataFrames.
+    """
+
+    df = df.rename(columns={"body": "text", "topics": "labels"})
+
+    print(f"Documents with no labels: {len(df[df['labels'].apply(len) == 0])}")
+    print(f"Documents with labels: {len(df[df['labels'].apply(len) != 0])}")
+    print(f"Total Documents: {len(df)}")
+
+    labels_df = df[df["labels"].apply(len) != 0]
+    train_df = labels_df[labels_df["reuters_lewissplit"] == "TRAIN"]
+    test_df = labels_df[labels_df["reuters_lewissplit"] == "TEST"]
+    print(f"Train Documents: {len(train_df)}")
+    print(f"Test Documents: {len(test_df)}")
+
+    # Separate features and labels
+    X = train_df["text"]
+    y = train_df["labels"]
+
+    # Split the data
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=1000, random_state=42
+    )
+
+    train_df = pd.DataFrame({"text": X_train, "labels": y_train})
+    val_df = pd.DataFrame({"text": X_val, "labels": y_val})
+
+    return train_df, val_df, test_df
+
+
+def get_labels(df: pd.DataFrame) -> tuple:
+    """
+    Returns a tuple containing the unique labels, label counts, and label-to-index mapping.
+    Args:
+        df (pd.DataFrame): DataFrame containing the dataset.
+    Returns:
+        tuple: Unique labels, label counts, label-to-index mapping, and index-to-label mapping.
+    """
+
+    all_labels = [label for labels in df["labels"] for label in labels]
+
+    unique_labels = pd.unique(all_labels)
+    print(f"Total labels: {len(unique_labels)}")
+    print(f"labels: {unique_labels}")
+
+    label_counts = Counter(all_labels)
+    label_counts_df = pd.DataFrame(
+        label_counts.items(), columns=["label", "count"]
+    ).sort_values("count", ascending=False)
+
+    # Create a mapping from labels to numerical values
+    label2idx = {
+        label: idx for idx, label in enumerate(label_counts_df["label"].unique())
+    }
+    idx2label = {
+        idx: label for idx, label in enumerate(label_counts_df["label"].unique())
+    }
+
+    # Map the 'Label' column to numerical values
+    label_counts_df["label_num"] = label_counts_df["label"].map(label2idx)
+
+    # Plot the bar chart
+    plt.figure(figsize=(10, 6))
+    plt.bar(
+        label_counts_df["label_num"],
+        label_counts_df["count"],
+        tick_label=label_counts_df["label_num"],
+    )
+    plt.xlabel("Labels")
+    plt.ylabel("Count")
+    plt.title("Count of Each Label")
+    plt.xticks([])  # Set x-ticks to show labels
+    plt.show()
+
+    return unique_labels, label_counts, label2idx, idx2label
