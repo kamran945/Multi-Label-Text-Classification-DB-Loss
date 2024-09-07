@@ -27,7 +27,7 @@ def create_model(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(
         model_ckpt,
-        padding=False,
+        padding=True,
         truncation=True,
         max_length=max_length,
     )

@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
-from torch.nn.utils.rnn import pad_sequence
 
 
 def preprocess_function(
@@ -20,7 +19,7 @@ def preprocess_function(
     encoding = tokenizer(
         texts,
         max_length=max_length,
-        padding=False,
+        padding=True,
         truncation=True,
         return_tensors="pt",
     )
@@ -63,32 +62,6 @@ class CustomDataset(Dataset):
         return item
 
 
-def custom_collate_fn(batch, tokenizer):
-    """
-    Custom collation function for handling padded sequences.
-    """
-    input_ids = batch["input_ids"]
-    attention_mask = batch["attention_mask"]
-    labels = batch["labels"]
-
-    # Pad sequences to the maximum length of the batch
-    padded_input_ids = pad_sequence(
-        input_ids, batch_first=True, padding_value=tokenizer.pad_token_id
-    )
-    padded_attention_mask = pad_sequence(
-        attention_mask, batch_first=True, padding_value=0
-    )
-
-    # Convert labels to tensor
-    labels = torch.stack(labels)
-
-    return {
-        "input_ids": padded_input_ids,
-        "attention_mask": padded_attention_mask,
-        "labels": labels,
-    }
-
-
 def get_train_val_loaders(
     train_df,
     val_df,
@@ -106,7 +79,6 @@ def get_train_val_loaders(
             tokenizer,
             model_config,
         ),
-        collate_fn=lambda batch: custom_collate_fn(batch, tokenizer),
         shuffle=True,
         batch_size=batch_size,
     )
@@ -117,7 +89,6 @@ def get_train_val_loaders(
             tokenizer,
             model_config,
         ),
-        collate_fn=lambda batch: custom_collate_fn(batch, tokenizer),
         shuffle=False,
         batch_size=batch_size,
     )
