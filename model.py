@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
@@ -29,11 +30,13 @@ def create_model(
         model_ckpt,
         max_length=max_length,
     )
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_ckpt,
-        num_labels=len(unique_labels),
-        id2label=idx2label,
-        label2id=label2idx,
+    model = nn.DataParallel(
+        AutoModelForSequenceClassification.from_pretrained(
+            model_ckpt,
+            num_labels=len(unique_labels),
+            id2label=idx2label,
+            label2id=label2idx,
+        )
     ).to(device)
 
     param_optimizer = list(model.named_parameters())
