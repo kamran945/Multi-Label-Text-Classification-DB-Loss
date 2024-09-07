@@ -19,7 +19,7 @@ def preprocess_function(
     encoding = tokenizer(
         texts,
         max_length=max_length,
-        padding=True,
+        padding="max_length",
         truncation=True,
         return_tensors="pt",
     )
