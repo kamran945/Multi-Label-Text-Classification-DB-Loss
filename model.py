@@ -1,6 +1,5 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from torch.optim import AdamW
 
 
 def create_model(
@@ -26,7 +25,12 @@ def create_model(
 
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(model_ckpt, max_length=max_length)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_ckpt,
+        padding=False,
+        truncation=True,
+        max_length=max_length,
+    )
     model = AutoModelForSequenceClassification.from_pretrained(
         model_ckpt,
         num_labels=len(unique_labels),
