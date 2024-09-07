@@ -3,12 +3,14 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.optim import AdamW
 
 
-def create_model(model_ckpt: str='bert-base-uncased',
-                 device: torch.device=torch.device('cpu'),
-                 max_length: int=512,
-                 unique_labels: list,
-                 idx2label: dict,
-                 label2idx: dict):
+def create_model(
+    model_ckpt: str = "bert-base-uncased",
+    device: torch.device = torch.device("cpu"),
+    max_length: int = 512,
+    unique_labels: list = [],
+    idx2label: dict = {},
+    label2idx: dict = {},
+):
     """
     Creates a BERT model with a custom classification head.
     Args:
@@ -23,25 +25,35 @@ def create_model(model_ckpt: str='bert-base-uncased',
         AutoTokenizer: The tokenizer used to preprocess the input data.
 
     """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_ckpt, max_length=max_length)
-    model = (AutoModelForSequenceClassification.from_pretrained(model_ckpt, 
-                                                                num_labels=len(unique_labels),
-                                                                id2label=idx2label,
-                                                                label2id=label2idx).to(device))
-
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_ckpt,
+        num_labels=len(unique_labels),
+        id2label=idx2label,
+        label2id=label2idx,
+    ).to(device)
 
     param_optimizer = list(model.named_parameters())
-    no_decay_params = ['bias', 'LayerNorm.weight'] 
+    no_decay_params = ["bias", "LayerNorm.weight"]
     param_names = [n for n, p in param_optimizer]
     param_values = [p for n, p in param_optimizer]
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(ndp in n for ndp in no_decay_params)],
-        'weight_decay_rate': 0.01},
-        {'params': [p for n, p in param_optimizer if any(ndp in n for ndp in no_decay_params)],
-        'weight_decay_rate': 0.0}
+        {
+            "params": [
+                p
+                for n, p in param_optimizer
+                if not any(ndp in n for ndp in no_decay_params)
+            ],
+            "weight_decay_rate": 0.01,
+        },
+        {
+            "params": [
+                p
+                for n, p in param_optimizer
+                if any(ndp in n for ndp in no_decay_params)
+            ],
+            "weight_decay_rate": 0.0,
+        },
     ]
     return model, tokenizer, optimizer_grouped_parameters
-
-
- 
