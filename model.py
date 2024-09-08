@@ -50,7 +50,7 @@ def create_model(
                 for n, p in param_optimizer
                 if not any(ndp in n for ndp in no_decay_params)
             ],
-            "weight_decay_rate": 0.01,
+            "weight_decay": 0.01,
         },
         {
             "params": [
@@ -58,7 +58,7 @@ def create_model(
                 for n, p in param_optimizer
                 if any(ndp in n for ndp in no_decay_params)
             ],
-            "weight_decay_rate": 0.0,
+            "weight_decay": 0.0,
         },
     ]
     return model, tokenizer, optimizer_grouped_parameters
